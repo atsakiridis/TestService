@@ -1,11 +1,15 @@
 package com.example.antonis.testservice;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
@@ -21,6 +25,7 @@ import android.widget.Toast;
 
 import com.example.antonis.testservice.dummy.DummyContent;
 
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -31,7 +36,8 @@ import java.util.List;
  * item details. On tablets, the activity presents the list of items and
  * item details side-by-side using two vertical panes.
  */
-public class ItemListActivity extends AppCompatActivity {
+public class ItemListActivity extends AppCompatActivity implements MyService.MyServiceListener,
+        ServiceConnection {
 
     /**
      * Whether or not the activity is in two-pane mode, i.e. running on a tablet
@@ -79,9 +85,83 @@ public class ItemListActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onStart()
+    {
+        super.onStart();
+        // The activity is about to become visible.
+        Log.i(TAG, "%% onStart");
+
+        // Register receiver to receive events from service
+        BroadcastReceiver broadcastReceiver = new MyBroadcastReceiver();
+        IntentFilter filter = new IntentFilter(MyService.INTENT_ACTION_CONNECTIVITY);
+        filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, filter);
+
+        bindService(new Intent(this, MyService.class), this, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+
+        // The activity has become visible (it is now "resumed").
+        Log.i(TAG, "%% onResume");
+
+    }
+
+    @Override
+    protected void onPause()
+    {
+        super.onPause();
+        Log.i(TAG, "%% onPause");
+    }
+
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        // The activity is no longer visible (it is now "stopped")
+        Log.i(TAG, "%% onStop");
+
+        unregisterReceiver(broadcastReceiver);
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+        // The activity is about to be destroyed.
+        Log.i(TAG, "%% onDestroy");
+    }
+
     private void setupRecyclerView(@NonNull RecyclerView recyclerView)
     {
         recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter(this, DummyContent.ITEMS, mTwoPane));
+    }
+
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service)
+    {
+        Log.i(TAG, "%% onServiceConnected");
+        // We've bound to LocalService, cast the IBinder and get LocalService instance
+        MyService.MyServiceBinder binder = (MyService.MyServiceBinder) service;
+        MyService myService = binder.getService();
+
+        try {
+            HashMap<String, Object> params = new HashMap<>();
+            myService.initialize(params, this);
+        }
+        catch (MyServiceException e) {
+
+        }
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name)
+    {
+
     }
 
     public static class SimpleItemRecyclerViewAdapter
@@ -157,6 +237,36 @@ public class ItemListActivity extends AppCompatActivity {
                 mContentView = (TextView) view.findViewById(R.id.content);
             }
         }
+    }
+
+    /**
+     * Receiver for getting broadcasts from Service
+     */
+    public class MyBroadcastReceiver extends BroadcastReceiver {
+        private static final String TAG = "MyBroadcastReceiver";
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.i(TAG, "Received broadcast");
+            StringBuilder sb = new StringBuilder();
+            sb.append("Action: " + intent.getAction() + "\n");
+            sb.append("URI: " + intent.toUri(Intent.URI_INTENT_SCHEME).toString() + "\n");
+            String log = sb.toString();
+            Log.d(TAG, log);
+            Toast.makeText(context, log, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * MyService callbacks
+     * @param status
+     */
+    @Override
+    public void onInitialized(boolean status)
+    {
+        Log.i(TAG, "Service is initialized");
+
+        // Done with initialization; don't need to keep the service running any longer
+        unbindService(this);
     }
 
 }
