@@ -1,41 +1,38 @@
 package com.example.antonis.testservice;
 
-import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
-import android.os.Binder;
 import android.os.Handler;
-import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import java.util.HashMap;
 import java.util.Map;
 
-public class MyService extends Service {
-    private static final String TAG = "MyService";
+//public class RCDevice extends Service {
+public class RCDevice {
+    private static final String TAG = "RCDevice";
+    //Context context;
     // Binder given to clients
-    private final IBinder myServiceBinder = new MyServiceBinder();
+    //private final IBinder myServiceBinder = new MyServiceBinder();
     public static String INTENT_ACTION_CONNECTIVITY = "com.example.antonis.testservice.CONNECTIVITY";
+    // Adding custom category for grouped filtering doesn't help as you still need to provide an action
+    //public static String INTENT_CATEGORY_RESTCOMM_ANDROID_SDK = "com.example.antonis.testservice.RESTCOMM_ANDROID_SDK";
 
 
-    public MyService()
+    public RCDevice()
     {
     }
 
-    /**
-     * Class used for the client Binder.  Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with IPC.
-     */
+    /*
     public class MyServiceBinder extends Binder {
-        public MyService getService()
+        public RCDevice getService()
         {
             // Return this instance of LocalService so clients can call public methods
-            return MyService.this;
+            return RCDevice.this;
         }
     }
 
-    /**
-     * Internal service callback; not meant for application use
-     */
     @Override
     public void onCreate()
     {
@@ -44,9 +41,6 @@ public class MyService extends Service {
 
     }
 
-    /**
-     * Internal service callback; not meant for application use
-     */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
@@ -56,9 +50,6 @@ public class MyService extends Service {
         return START_NOT_STICKY;
     }
 
-    /**
-     * Internal service callback; not meant for application use
-     */
     @Override
     public IBinder onBind(Intent intent)
     {
@@ -68,9 +59,6 @@ public class MyService extends Service {
     }
 
 
-    /**
-     * Internal service callback; not meant for application use
-     */
     @Override
     public void onRebind(Intent intent)
     {
@@ -78,9 +66,6 @@ public class MyService extends Service {
 
     }
 
-    /**
-     * Internal service callback; not meant for application use
-     */
     @Override
     public void onDestroy()
     {
@@ -88,9 +73,6 @@ public class MyService extends Service {
 
     }
 
-    /**
-     * Internal service callback; not meant for application use
-     */
     @Override
     public boolean onUnbind(Intent intent)
     {
@@ -106,18 +88,32 @@ public class MyService extends Service {
         //   is called and hence isServiceAttached remains false, even though we are attached to it and this messes up the service state.
         return true;
     }
+    */
 
     /**
      * Validate params and register for push. If we have a synchronous error we return an exception
+     *
+     * Let's use static methods to make it super easy to use from separate activities with minimum boilerplate code
+     *
      * @param parameters
      * @param deviceListener
      * @return
-     * @throws MyServiceException
+     * @throws MyException
      */
-    public void initialize(Map<String, Object> parameters, MyServiceListener deviceListener) throws MyServiceException
+    public static void initialize(Context context, Map<String, Object> parameters, MyServiceListener deviceListener) throws MyException
     {
         Log.i(TAG, "initialize()");
-        new Handler(getMainLooper()).postDelayed(
+
+        // Validate and throw exception if validation issue
+
+        // Save settings in cache
+
+        // Perform asynchronous call to setup push
+
+
+        //this.context = context;
+        // test callbacks
+        new Handler(context.getMainLooper()).postDelayed(
                 () -> {
                     // Use broadcasts for interesting events so that we have more flexibility on events. One example that bit us
                     // with previous design is needing to be notified in non-call activities on when the call is over in the
@@ -126,25 +122,37 @@ public class MyService extends Service {
                     Intent intent = new Intent();
                     intent.setAction(INTENT_ACTION_CONNECTIVITY);
                     intent.putExtra("data","Connectivity Action");
-                    LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
                 }
                 , 5000);
 
-        new Handler(getMainLooper()).postDelayed(
+        new Handler(context.getMainLooper()).postDelayed(
                 () -> {
-                    Log.i(TAG, "Calling calback");
+                    Log.i(TAG, "Calling callback");
                     // notify that initialization is good
                     deviceListener.onInitialized(true);
                 }
                 , 1000);
+
+
+    }
+
+    public static RCConnection connect(Context context, HashMap<String, Object> parameters, RCConnection.RCConnectionListener listener) throws MyException
+    {
+        // We need to asynchronously register signaling and when ready start the call
+
+        RCConnection connection = new RCConnection(context, listener);
+
+        return connection;
     }
 
     /**
      * Callbacks are for asynchronous responses to specific API calls, like initialize().
-     * General events, like connectivity updates, etc should go out with broadcasts, so that it's easier
+     * More general & unsolicited events, should go out with broadcasts, so that it's easier
      * to subscribe from any activity without having to bind to service
      */
     public interface MyServiceListener {
+        // Push notifications are registered; if status is ok, then user is free to use the App
         void onInitialized(boolean status);
     }
 }

@@ -30,7 +30,7 @@
         </activity>
 
         <service
-            android:name=".MyService"
+            android:name=".RCDevice"
             android:enabled="true"
             android:exported="true">
         </service>

@@ -36,8 +36,9 @@ import java.util.List;
  * item details. On tablets, the activity presents the list of items and
  * item details side-by-side using two vertical panes.
  */
-public class ItemListActivity extends AppCompatActivity implements MyService.MyServiceListener,
-        ServiceConnection {
+//public class ItemListActivity extends AppCompatActivity implements RCDevice.MyServiceListener,
+//        ServiceConnection {
+public class ItemListActivity extends AppCompatActivity implements RCDevice.MyServiceListener {
 
     /**
      * Whether or not the activity is in two-pane mode, i.e. running on a tablet
@@ -93,12 +94,31 @@ public class ItemListActivity extends AppCompatActivity implements MyService.MyS
         Log.i(TAG, "%% onStart");
 
         // Register receiver to receive events from service
-        BroadcastReceiver broadcastReceiver = new MyBroadcastReceiver();
-        IntentFilter filter = new IntentFilter(MyService.INTENT_ACTION_CONNECTIVITY);
-        filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+        broadcastReceiver = new MyBroadcastReceiver();
+
+        // Doesn't seem to be a way to specify wildcard action; if no action is passed then sender must also pass no action
+        IntentFilter filter = new IntentFilter(RCDevice.INTENT_ACTION_CONNECTIVITY);
+        filter.addAction(RCConnection.INTENT_ACTION_CONNECTION_DISCONNECTED);
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, filter);
 
-        bindService(new Intent(this, MyService.class), this, Context.BIND_AUTO_CREATE);
+        HashMap<String, Object> params = new HashMap<>();
+        // Important parameters:
+        // - Intents through which we can wake specific Activities on user requests
+        //   (like when answering a call we need to know which is the call handling activity so that we can wake it)
+        // - Signaling parameters so that we can keep them around for when the call arrives. An issue here is
+        //   how can we fully validate them? That is what happens if credentials passed are valid BUT don't work when
+        //   we try on the server later that we receive the call
+        // - Push parameters so that we can register right away
+        //params.put();
+        //RCDevice device = new RCDevice();
+        try {
+            Log.i(TAG, "Initializing RCDevice");
+            RCDevice.initialize(getApplicationContext(), params, this);
+        } catch (MyException e) {
+            e.printStackTrace();
+        }
+
+        //bindService(new Intent(this, RCDevice.class), this, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -125,7 +145,7 @@ public class ItemListActivity extends AppCompatActivity implements MyService.MyS
         // The activity is no longer visible (it is now "stopped")
         Log.i(TAG, "%% onStop");
 
-        unregisterReceiver(broadcastReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver);
     }
 
     @Override
@@ -141,19 +161,20 @@ public class ItemListActivity extends AppCompatActivity implements MyService.MyS
         recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter(this, DummyContent.ITEMS, mTwoPane));
     }
 
+/*
     @Override
     public void onServiceConnected(ComponentName name, IBinder service)
     {
         Log.i(TAG, "%% onServiceConnected");
         // We've bound to LocalService, cast the IBinder and get LocalService instance
-        MyService.MyServiceBinder binder = (MyService.MyServiceBinder) service;
-        MyService myService = binder.getService();
+        RCDevice.MyServiceBinder binder = (RCDevice.MyServiceBinder) service;
+        RCDevice device = binder.getService();
 
         try {
             HashMap<String, Object> params = new HashMap<>();
-            myService.initialize(params, this);
+            device.initialize(params, this);
         }
-        catch (MyServiceException e) {
+        catch (MyException e) {
 
         }
     }
@@ -163,6 +184,7 @@ public class ItemListActivity extends AppCompatActivity implements MyService.MyS
     {
 
     }
+*/
 
     public static class SimpleItemRecyclerViewAdapter
             extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
@@ -257,7 +279,7 @@ public class ItemListActivity extends AppCompatActivity implements MyService.MyS
     }
 
     /**
-     * MyService callbacks
+     * RCDevice callbacks
      * @param status
      */
     @Override
@@ -266,7 +288,7 @@ public class ItemListActivity extends AppCompatActivity implements MyService.MyS
         Log.i(TAG, "Service is initialized");
 
         // Done with initialization; don't need to keep the service running any longer
-        unbindService(this);
+        //unbindService(this);
     }
 
 }
