@@ -2,11 +2,8 @@ package com.example.antonis.testservice;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
@@ -14,17 +11,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.ActionBar;
 import android.view.MenuItem;
 
-import com.example.antonis.testservice.dummy.DummyContent;
-
 /**
  * An activity representing a single Item detail screen. This
  * activity is only used on narrow width devices. On tablet-size devices,
  * item details are presented side-by-side with a list of items
  * in a {@link ItemListActivity}.
  */
-public class ItemDetailActivity extends AppCompatActivity implements RCConnection.RCConnectionListener {
+public class ItemDetailActivity extends AppCompatActivity implements RCDevice.RCDeviceMessageListener {
     private static final String TAG = "ItemDetailActivity";
-    RCConnection connection;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -39,13 +34,36 @@ public class ItemDetailActivity extends AppCompatActivity implements RCConnectio
             @Override
             public void onClick(View view)
             {
-                Snackbar.make(view, "Replace with your own detail action", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "Sending text message", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
 
+                try {
+                    Log.i(TAG, "Sending message");
+                    RCDevice.sendMessage(getApplicationContext(), "Hello there!", null, ItemDetailActivity.this);
+                } catch (RCException e) {
+                    e.printStackTrace();
+                }
+
+/*
                 Log.i(TAG, "Disconnecting");
                 connection.disconnect();
+*/
             }
         });
+
+        FloatingActionButton fab_call = (FloatingActionButton) findViewById(R.id.fab_call);
+        fab_call.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view)
+            {
+                Snackbar.make(view, "Invoking call Activity", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+
+                Intent intent = new Intent(ItemDetailActivity.this, CallActivity.class);
+                startActivity(intent);
+            }
+        });
+
 
         // Show the Up button in the action bar.
         ActionBar actionBar = getSupportActionBar();
@@ -73,13 +91,6 @@ public class ItemDetailActivity extends AppCompatActivity implements RCConnectio
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.item_detail_container, fragment)
                     .commit();
-        }
-
-        try {
-            Log.i(TAG, "Connecting");
-            connection = RCDevice.connect(getApplicationContext(), null, this);
-        } catch (MyException e) {
-            e.printStackTrace();
         }
     }
 
@@ -133,17 +144,10 @@ public class ItemDetailActivity extends AppCompatActivity implements RCConnectio
         return super.onOptionsItemSelected(item);
     }
 
-    // RCConnection callbacks
+    // RCDevice callbacks
     @Override
-    public void onConnected(boolean status)
+    public void onMessageSent(boolean status)
     {
-        Log.i(TAG, "Connection is connected");
+        Log.i(TAG, "Message is sent");
     }
-
-    @Override
-    public void onDisconnected(boolean status)
-    {
-        Log.i(TAG, "Connection is disconnected");
-    }
-
 }

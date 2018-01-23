@@ -15,7 +15,8 @@ public class RCDevice {
     //Context context;
     // Binder given to clients
     //private final IBinder myServiceBinder = new MyServiceBinder();
-    public static String INTENT_ACTION_CONNECTIVITY = "com.example.antonis.testservice.CONNECTIVITY";
+    public static String INTENT_ACTION_INITIALIZED = "com.example.antonis.testservice.CONNECTIVITY";
+    public static String INTENT_ACTION_MESSAGE_SENT = "com.example.antonis.testservice.MESSAGE_SENT";
     // Adding custom category for grouped filtering doesn't help as you still need to provide an action
     //public static String INTENT_CATEGORY_RESTCOMM_ANDROID_SDK = "com.example.antonis.testservice.RESTCOMM_ANDROID_SDK";
 
@@ -98,9 +99,9 @@ public class RCDevice {
      * @param parameters
      * @param deviceListener
      * @return
-     * @throws MyException
+     * @throws RCException
      */
-    public static void initialize(Context context, Map<String, Object> parameters, MyServiceListener deviceListener) throws MyException
+    public static void initialize(Context context, Map<String, Object> parameters, RCDeviceListener deviceListener) throws RCException
     {
         Log.i(TAG, "initialize()");
 
@@ -110,9 +111,8 @@ public class RCDevice {
 
         // Perform asynchronous call to setup push
 
-
-        //this.context = context;
-        // test callbacks
+        // Let's send an unsolicited broadcast. TODO: think about whether it really makes sense to wrap connectivity events in SDK
+        /*
         new Handler(context.getMainLooper()).postDelayed(
                 () -> {
                     // Use broadcasts for interesting events so that we have more flexibility on events. One example that bit us
@@ -120,30 +120,60 @@ public class RCDevice {
                     // scenario of backgrounding. This was not possible previously and would be too messy to implement
                     Log.i(TAG, "Sending connectivity broadcast intent");
                     Intent intent = new Intent();
-                    intent.setAction(INTENT_ACTION_CONNECTIVITY);
+                    intent.setAction(INTENT_ACTION_INITIALIZED);
                     intent.putExtra("data","Connectivity Action");
                     LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
                 }
                 , 5000);
+         */
 
         new Handler(context.getMainLooper()).postDelayed(
                 () -> {
                     Log.i(TAG, "Calling callback");
-                    // notify that initialization is good
+                    // notify that initialization is good if the user is still on the Activity from which they initialized
                     deviceListener.onInitialized(true);
+
+                    // notify that initialization is good for users that have left the initialization Activity. TODO: But how do we make sure that we are still running
+                    // when this async functionality is finished???
+                    Intent intent = new Intent();
+                    intent.setAction(INTENT_ACTION_INITIALIZED);
+                    intent.putExtra("data","Initialized Action");
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
                 }
-                , 1000);
-
-
+                , 2000);
     }
 
-    public static RCConnection connect(Context context, HashMap<String, Object> parameters, RCConnection.RCConnectionListener listener) throws MyException
+    public static RCConnection connect(Context context, HashMap<String, Object> parameters, RCConnection.RCConnectionListener listener) throws RCException
     {
         // We need to asynchronously register signaling and when ready start the call
+
+        Log.i(TAG, "connect()");
 
         RCConnection connection = new RCConnection(context, listener);
 
         return connection;
+    }
+
+    public static String sendMessage(Context context, String message, Map<String, String> parameters, RCDeviceMessageListener deviceListener) throws RCException
+    {
+        Log.i(TAG, "sendMessage()");
+
+        new Handler(context.getMainLooper()).postDelayed(
+                () -> {
+                    Log.i(TAG, "Calling callback");
+                    // notify that initialization is good if the user is still on the Activity from which they initialized
+                    deviceListener.onMessageSent(true);
+
+                    // notify that initialization is good for users that have left the initialization Activity. TODO: But how do we make sure that we are still running
+                    // when this async functionality is finished???
+                    Intent intent = new Intent();
+                    intent.setAction(INTENT_ACTION_MESSAGE_SENT);
+                    intent.putExtra("data","Connectivity Action");
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+                }
+                , 2000);
+
+        return "message-id";
     }
 
     /**
@@ -151,8 +181,14 @@ public class RCDevice {
      * More general & unsolicited events, should go out with broadcasts, so that it's easier
      * to subscribe from any activity without having to bind to service
      */
-    public interface MyServiceListener {
+    public interface RCDeviceListener {
         // Push notifications are registered; if status is ok, then user is free to use the App
         void onInitialized(boolean status);
     }
+
+    // Let's split out Message listener from RCDevice, since 99% of the times there's a separate activity for each
+    public interface RCDeviceMessageListener {
+        void onMessageSent(boolean status);
+    }
+
 }

@@ -51,7 +51,7 @@ public class RCConnection {
                     intent.putExtra("data","Connection Disconnected");
                     LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
                 }
-                , 4000);
+                , 2000);
     }
 
     public interface RCConnectionListener {

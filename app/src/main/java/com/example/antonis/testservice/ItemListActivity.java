@@ -1,13 +1,10 @@
 package com.example.antonis.testservice;
 
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
@@ -24,6 +21,7 @@ import android.widget.Toast;
 
 
 import com.example.antonis.testservice.dummy.DummyContent;
+import com.google.firebase.iid.FirebaseInstanceId;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,9 +34,9 @@ import java.util.List;
  * item details. On tablets, the activity presents the list of items and
  * item details side-by-side using two vertical panes.
  */
-//public class ItemListActivity extends AppCompatActivity implements RCDevice.MyServiceListener,
+//public class ItemListActivity extends AppCompatActivity implements RCDevice.RCDeviceListener,
 //        ServiceConnection {
-public class ItemListActivity extends AppCompatActivity implements RCDevice.MyServiceListener {
+public class ItemListActivity extends AppCompatActivity implements RCDevice.RCDeviceListener {
 
     /**
      * Whether or not the activity is in two-pane mode, i.e. running on a tablet
@@ -97,7 +95,7 @@ public class ItemListActivity extends AppCompatActivity implements RCDevice.MySe
         broadcastReceiver = new MyBroadcastReceiver();
 
         // Doesn't seem to be a way to specify wildcard action; if no action is passed then sender must also pass no action
-        IntentFilter filter = new IntentFilter(RCDevice.INTENT_ACTION_CONNECTIVITY);
+        IntentFilter filter = new IntentFilter(RCDevice.INTENT_ACTION_INITIALIZED);
         filter.addAction(RCConnection.INTENT_ACTION_CONNECTION_DISCONNECTED);
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, filter);
 
@@ -114,11 +112,14 @@ public class ItemListActivity extends AppCompatActivity implements RCDevice.MySe
         try {
             Log.i(TAG, "Initializing RCDevice");
             RCDevice.initialize(getApplicationContext(), params, this);
-        } catch (MyException e) {
+        } catch (RCException e) {
             e.printStackTrace();
         }
 
         //bindService(new Intent(this, RCDevice.class), this, Context.BIND_AUTO_CREATE);
+
+        // Start started service
+        //startService(new Intent(this, StartedService.class));
     }
 
     @Override
@@ -128,6 +129,12 @@ public class ItemListActivity extends AppCompatActivity implements RCDevice.MySe
 
         // The activity has become visible (it is now "resumed").
         Log.i(TAG, "%% onResume");
+
+        // Get token
+        String token = FirebaseInstanceId.getInstance().getToken();
+
+        // Log and toast
+        Log.d(TAG, "Token is: " + token);
 
     }
 
@@ -174,7 +181,7 @@ public class ItemListActivity extends AppCompatActivity implements RCDevice.MySe
             HashMap<String, Object> params = new HashMap<>();
             device.initialize(params, this);
         }
-        catch (MyException e) {
+        catch (RCException e) {
 
         }
     }
@@ -290,5 +297,4 @@ public class ItemListActivity extends AppCompatActivity implements RCDevice.MySe
         // Done with initialization; don't need to keep the service running any longer
         //unbindService(this);
     }
-
 }
